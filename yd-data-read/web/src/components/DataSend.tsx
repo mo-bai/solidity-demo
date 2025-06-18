@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { stringToHex, hexToString } from 'viem'
 import { useTransfer } from '../hooks/transferHook'
 import {
+  useChainId,
   usePublicClient,
   useWaitForTransactionReceipt,
   // useWatchContractEvent,
   useWriteContract
 } from 'wagmi'
 import { dataSendAbi } from '../abis/dataSendAbi'
+import { sepolia } from 'viem/chains'
 
 const sendTypeList = [
   {
@@ -24,17 +26,28 @@ const sendTypeList = [
   }
 ]
 const blackHoleAddress = '0x0000000000000000000000000000000000000000'
-const contractAddress = '0x97385873623e65a22d361Eb4252b63E19c19060E'
+const contractAddressTest = '0x97385873623e65a22d361Eb4252b63E19c19060E'
+const contractAddressSepolia = '0xBE614F3C6172E9859004BB6c2cCb1dDAd32E28Df'
 
 export default function DataSend() {
   const [activeSendType, setActiveSendType] = useState(sendTypeList[0].value)
+  const chainId = useChainId()
   const [dataContent, setDataContent] = useState('')
   const { transfer, isPending, hash, isConfirming, isConfirmed } = useTransfer()
   const client = usePublicClient()
+
+  const contractAddress = useMemo(() => {
+    if (chainId === sepolia.id) {
+      return contractAddressSepolia
+    }
+    return contractAddressTest
+  }, [chainId])
+
   // 查询交易传递的消息
   const [info, setInfo] = useState({
     blockNumber: '',
-    input: ''
+    input: '',
+    hash: ''
   })
 
   const [latestEvent, setLatestEvent] = useState({
@@ -89,7 +102,7 @@ export default function DataSend() {
 
   // 这个 hook 无效
   // useWatchContractEvent({
-  //   address: contractAddress,
+  //   address: contractAddressTest,
   //   abi: dataSendAbi,
   //   eventName: 'DataSet',
   //   enabled: true,
@@ -165,7 +178,8 @@ export default function DataSend() {
   ])
 
   useEffect(() => {
-    if (client && hash) {
+    // 交易确认后，块的所有信息才会返回
+    if (client && hash && isConfirmed) {
       const getInfo = async () => {
         const transaction = await client.getTransaction({
           hash: hash
@@ -173,27 +187,29 @@ export default function DataSend() {
         if (transaction.input) {
           console.log('transaction:', transaction, transaction.input)
           setInfo({
-            blockNumber: transaction.blockNumber.toString(),
-            input: transaction.input
+            blockNumber: transaction.blockNumber?.toString() || '',
+            input: transaction.input,
+            hash: transaction.hash
           })
         }
       }
       getInfo()
     }
-  }, [client, hash])
+  }, [client, hash, isConfirmed])
 
   const changeSendType = (value: string) => {
     setActiveSendType(value)
     setDataContent('')
     setInfo({
       blockNumber: '',
-      input: ''
+      input: '',
+      hash: ''
     })
   }
 
   return (
     <div className='p-4 mt-4 w-full bg-gray-100'>
-      <h1>数据上链</h1>
+      <h1>数据上链-{chainId === sepolia.id ? 'Sepolia' : '测试链'}</h1>
       <div className='flex gap-x-2 mt-4 w-full item-center'>
         {sendTypeList.map((item) => (
           <SendTypeButton
@@ -242,7 +258,9 @@ export default function DataSend() {
           <span>
             本次交易信息:{' '}
             {info.input &&
-              `blockNumber-${info.blockNumber} ，交易消息-${info.input}`}
+              `blockNumber-${info.blockNumber} ，交易消息-${hexToString(
+                info.input as `0x${string}`
+              )}，交易哈希-${info.hash}`}
           </span>
         </div>
       )}

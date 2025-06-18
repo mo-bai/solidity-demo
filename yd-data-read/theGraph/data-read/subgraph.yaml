@@ -1,0 +1,26 @@
+specVersion: 1.3.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: DataReadContract
+    network: sepolia
+    source:
+      address: "0xBE614F3C6172E9859004BB6c2cCb1dDAd32E28Df"
+      abi: DataReadContract
+      startBlock: 8560320
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - DataSet
+      abis:
+        - name: DataReadContract
+          file: ./abis/DataReadContract.json
+      eventHandlers:
+        - event: DataSet(indexed address,string)
+          handler: handleDataSet
+      file: ./src/data-read-contract.ts

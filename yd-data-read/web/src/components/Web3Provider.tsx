@@ -1,5 +1,5 @@
 import { WagmiProvider, createConfig } from 'wagmi'
-// import { mainnet } from 'wagmi/chains'
+import { sepolia } from 'wagmi/chains'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
 
@@ -27,7 +27,8 @@ const config = createConfig(
           default: { http: ['http://127.0.0.1:7545'] },
           public: { http: ['http://127.0.0.1:7545'] }
         }
-      }
+      },
+      sepolia
     ],
 
     // syncConnectedChain: true,

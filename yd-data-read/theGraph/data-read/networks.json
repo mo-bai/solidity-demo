@@ -1,0 +1,8 @@
+{
+  "sepolia": {
+    "DataReadContract": {
+      "address": "0xBE614F3C6172E9859004BB6c2cCb1dDAd32E28Df",
+      "startBlock": 8560320
+    }
+  }
+}
