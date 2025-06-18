@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { stringToHex, hexToString } from 'viem'
 import { useTransfer } from '../hooks/transferHook'
+import { useQuery } from '@tanstack/react-query'
+import { gql, request } from 'graphql-request'
 import {
   useChainId,
   usePublicClient,
@@ -10,6 +12,22 @@ import {
 } from 'wagmi'
 import { dataSendAbi } from '../abis/dataSendAbi'
 import { sepolia } from 'viem/chains'
+
+const query = gql`
+  {
+    dataSets(first: 5) {
+      id
+      user
+      data
+      blockNumber
+    }
+  }
+`
+const url =
+  'https://api.studio.thegraph.com/query/113804/data-read/version/latest'
+const headers = {
+  Authorization: `Bearer ${import.meta.env.VITE_SUBGRAPH_API_KEY}`
+}
 
 const sendTypeList = [
   {
@@ -113,6 +131,32 @@ export default function DataSend() {
   //     console.error('❌ 全局事件监听错误:', error)
   //   }
   // })
+
+  const {
+    data: graphData,
+    status: graphStatus,
+    refetch: getGraphData
+  } = useQuery({
+    queryKey: ['data'],
+    async queryFn() {
+      return await request<{
+        dataSets: {
+          id: string
+          user: string
+          data: string
+          blockNumber: string
+        }[]
+      }>(url, query, {}, headers)
+    },
+    enabled: false
+  })
+
+  useEffect(() => {
+    console.log('graphStatus:', graphStatus)
+    if (graphStatus === 'success') {
+      console.log('graphData:', graphData)
+    }
+  }, [graphStatus, graphData])
 
   useEffect(() => {
     if (writeError) {
@@ -241,18 +285,45 @@ export default function DataSend() {
         </button>
       </div>
       {activeSendType === 'eventRecord' ? (
-        <div className='mt-4'>
-          <h2>监听到的最新事件信息: </h2>
-          <span>
-            区块号:{latestEvent.blockNumber}
-            <br />
-            区块哈希:{latestEvent.blockHash}
-            <br />
-            用户地址:{latestEvent.user}
-            <br />
-            数据:{hexToString(latestEvent.data as `0x${string}`)}
-          </span>
-        </div>
+        <>
+          <div className='mt-4'>
+            <h2>监听到的最新事件信息: </h2>
+            <span>
+              区块号:{latestEvent.blockNumber}
+              <br />
+              区块哈希:{latestEvent.blockHash}
+              <br />
+              用户地址:{latestEvent.user}
+              <br />
+              数据:{hexToString(latestEvent.data as `0x${string}`)}
+            </span>
+          </div>
+          {latestEvent.blockNumber && (
+            <div className='mt-4'>
+              <button
+                className='px-4 py-2 h-10 text-white bg-blue-500 rounded-md cursor-pointer'
+                onClick={() => getGraphData()}>
+                获取最新5条 the graph 数据
+              </button>
+              <div>
+                {graphData &&
+                  graphData.dataSets
+                    .sort(
+                      (a, b) => Number(b.blockNumber) - Number(a.blockNumber)
+                    )
+                    .map((item) => (
+                      <div key={item.id}>
+                        <span>用户地址:{item.user}</span>
+                        <span>
+                          数据:{hexToString(item.data as `0x${string}`)}
+                        </span>
+                        <span>区块号:{item.blockNumber}</span>
+                      </div>
+                    ))}
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <div className='mt-4'>
           <span>
